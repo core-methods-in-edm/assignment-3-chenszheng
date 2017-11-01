@@ -21,7 +21,7 @@ library(ggplot2)
 Now, upload the file "Class_Motivation.csv" from the Assignment 3 Repository as a data frame called "K1""
 ```{r}
 
-K1 <- read.table(...)
+K1 <- read.csv(file="C:/Users/Chen/Documents/CUTC/courses/2017 Fall_Core Methods of Educational Data Mining/1024/assignment-3-chenszheng/Class_Motivation.csv", header=TRUE)
 
 ```
 
@@ -39,14 +39,14 @@ K2 <- dplyr::select(K1, 2:6)
 
 It is important to think about the meaning of missing values when clustering. We could treat them as having meaning or we could remove those people who have them. Neither option is ideal. What problems do you foresee if we recode or remove these values? Write your answers below:
 
-
+Recoding would alter the original information, and recoding would lead to lost of information. Both could impair fidelity of the result.
 
 We will remove people with missing values for this assignment, but keep in mind the issues that you have identified.
 
 
 ```{r}
 
-K3 <- na.omit(K2) #This command create a data frame with only those people with no missing values. It "omits" all rows with missing values, also known as a "listwise deletion". EG - It runs down the list deleting rows as it goes.
+K3 <- na.omit(K2) #This command creates a data frame with only those people with no missing values. It "omits" all rows with missing values, also known as a "listwise deletion". EG - It runs down the list deleting rows as it goes.
 
 ```
 
@@ -73,7 +73,7 @@ Also, we need to choose the number of clusters we think are in the data. We will
 
 ```{r}
 
-fit <- kmeans(K3, 2) 
+fit <- kmeans(K3, centers=2) 
 
 #We have created an object called "fit" that contains all the details of our clustering including which observations belong to each cluster.
 
@@ -133,7 +133,7 @@ K6$cluster <- as.factor(K6$cluster)
 Now we can plot our line plot using the ggplot command, "ggplot()".
 
 - The first argument in a ggplot is the dataframe we are using: K6
-- Next is what is called an aesthetic (aes), the aesthetic tells ggplot which variables to use and how to use them. Here we are using the variables "week" and "avg" on the x and y axes and we are going color these variables using the "cluster" variable
+- Next is what is called an aesthetic (aes), the aesthetic tells ggplot which variables to use and how to use them. Here we are using the variables "week" and "avg" on the x and y axes and we are going to color these variables using the "cluster" variable
 - Then we are going to tell ggplot which type of plot we want to use by specifiying a "geom()", in this case a line plot: geom_line()
 - Finally we are going to clean up our axes labels: xlab("Week") & ylab("Average Motivation")
 
@@ -151,8 +151,34 @@ It would be useful to determine how many people are in each cluster. We can do t
 K7 <- dplyr::count(K4, cluster)
 ```
 
-Look at the number of people in each cluster, now repeat this process for 3 rather than 2 clusters. Which cluster grouping do you think is more informative? Write your answer below:
+Look at the number of people in each cluster, now repeat this process for 3 rather than 2 clusters. 
 
+```{r}
+fit <- kmeans(K3, centers=3) 
+
+fit$cluster
+
+K4 <- data.frame(K3, fit$cluster)
+
+names(K4) <- c("1", "2", "3", "4", "5", "cluster") 
+
+K5 <- tidyr::gather(K4, "week", "motivation", 1:5)
+
+K6 <- K5 %>% group_by(week, cluster)
+K6 <- summarise(K6, avg = mean(motivation))
+K6$week <- as.numeric(K6$week)
+K6$cluster <- as.factor(K6$cluster)
+
+g3<-ggplot(K6, aes(week, avg, colour = cluster)) + geom_line() + xlab("Week") + ylab("Average Motivation")
+
+K7 <- dplyr::count(K4, cluster)
+
+```
+
+
+Which cluster grouping do you think is more informative? Write your answer below:
+
+I think the grouping with 2 centroids is more informative.
 
 Once you have done this, save both of your plots to the Assignment 5 file. Create a Zotero item to index your new computer program (Assignment 5.rmd) in Zotero. Then commit your assignment, push it to your Github account and then Pull request your version to the original assignment version so I can see it.
 
@@ -160,9 +186,115 @@ Once you have done this, save both of your plots to the Assignment 5 file. Creat
 
 Now, try to do the same for the data [collected in class](https://tccolumbia.qualtrics.com/SE/?SID=SV_6RRqlSAM6lZWYQt). Create two groups of clusters, the answers to the questions and regions where people grew up. 
 
+```{r}
+D2 <- read.csv("C:/Users/Chen/Documents/CUTC/courses/2017 Fall_Core Methods of Educational Data Mining/1024/assignment-3-chenszheng/cluster-class-data.csv")
+#View(D2)
+
+D2.a.select<-dplyr::select(D2, 6:13)
+D2.a.omit<-na.omit(D2.select)
+D2.a.scale<-scale(D2.a.omit)
+
+fit.ans<-kmeans(D2.a.scale, center=3)
+#fit.ans$cluster
+fit.ans.clustered<-data.frame(D2.a.scale,fit.ans$cluster)
+names(fit.ans.clustered)<-c("1","2","3","4","5","6","7","8","cluster")
+fit.ans.gather<-tidyr::gather(fit.ans.clustered,"question", "Answer",1:8)
+fit.group<-fit.ans.gather %>% group_by(question, cluster)
+fit.group<-summarize(fit.group,avg=mean(Answer))
+
+fit.group$question <- as.numeric(fit.group$question)
+fit.group$cluster <- as.factor(fit.group$cluster)
+
+g.question<-ggplot(fit.group, aes(question, avg, colour=cluster))+
+  geom_line()+
+  xlab("question")+
+  ylab("Average Answer")
+
+g.question
+
+count.cluster<-dplyr::count(fit.ans.clustered,cluster)
+
+#Find logitude and latitude for each city 
+#install.packages("ggmap")
+library(ggmap)
+
+city<-as.character(D2[,14])
+
+lon<-vector("list",length(city))
+lat<-vector("list",length(city))
+for (i in 1:length(city)){
+  temp<-geocode(city[i])
+  lon[i]<-temp[1]
+  lat[i]<-temp[2]
+}
+
+lon<-t(as.data.frame(lon))
+lat<-t(as.data.frame(lat))
+coord<-cbind(lon,lat)
+colnames(coord)<-c("Longitude","Latitude")
+rownames(coord)<-city
+#Now coord has the longitude and latitude of each city
+
+D2.coord<-cbind(D2, coord)
+#View(D2.coord)
+D2.c.select<-dplyr::select(D2.coord, "Longitude","Latitude")
+#Need to fill the NA's
+D2.c.select["Amoy",]<-c(118.089425,24.479833)
+D2.c.select["Tallahassee",]<-c(-84.280733,30.438256)
+D2.c.select["Delhi",]<-c(77.102490,28.704059)
+D2.c.select["Dongguan",]<-c(113.751799,23.020673)
+D2.c.select["Honolulu",]<-c(-157.858333,21.306944)
+D2.c.select["Westport",]<-c(-94.598561,39.058745)
+D2.c.select["Denville",]<-c(-74.477377,40.892321)
+D2.c.omit<-na.omit(D2.c.select)
+D2.c.scale<-scale(D2.c.select)
+
+fit.coord<-kmeans(D2.c.scale, center=3)
+#fit.coord$cluster
+fit.coord.clustered<-data.frame(D2.c.scale,fit.coord$cluster)
+names(fit.coord.clustered)<-c("Longitude","Latitude","cluster")
+fit.coord.clustered$cluster<-as.factor(fit.coord.clustered$cluster)
+ggplot(fit.coord.clustered, aes(x=Latitude, y=Longitude, color=cluster), text(labels=row.names(fit.coord.clustered))) + 
+  geom_point(shape=1)
+
+```
+
 ##Part III
 
 Create a visualization that shows the overlap between the two groups of clusters you created in part III.
+
+```{r}
+#View(fit.ans.clustered)
+#View(fit.coord.clustered)
+D2.name <- tidyr::unite(D2,col=name, QID1_TEXT, QID2_TEXT, sep=" ")
+name<-D2.name$name
+
+fit.coord.clustered$name<-name
+fit.ans.clustered$name<-name
+
+coord.select<-select(fit.coord.clustered, name, cluster)
+colnames(coord.select)<-c("name","coord")
+ans.select<-select(fit.ans.clustered, name, cluster)
+colnames(ans.select)<-c("name","ans")
+
+clusters<-cbind(coord.select,ans.select$ans)
+colnames(clusters)<-c("name","coord","ans")
+clusters$coord<-as.numeric(clusters$coord)
+clusters$ans<-as.numeric(clusters$ans)
+
+clusters$overlap<-0
+
+for (i in 1:nrow(clusters)){
+  if (clusters[i,"coord"]==clusters[i,"ans"])
+  {clusters[i,"overlap"]<-1}
+}
+
+clusters$overlap<-as.factor(clusters$overlap)
+
+ggplot(clusters, aes(x=coord, y=ans, color=overlap), text(labels=name))+geom_point(shape=1)
+
+```
+
 
 Code Book:
 
