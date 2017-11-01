@@ -1,0 +1,62 @@
+---
+title: "Assignment 5"
+author: "Chen Zheng"
+date: "October 26, 2017"
+output: html_document
+---
+```{r}
+fit <- kmeans(K3, centers=2) 
+
+fit$cluster
+
+K4 <- data.frame(K3, fit$cluster)
+
+names(K4) <- c("1", "2", "3", "4", "5", "cluster") 
+
+K5 <- tidyr::gather(K4, "week", "motivation", 1:5)
+
+K6 <- K5 %>% group_by(week, cluster)
+K6 <- summarise(K6, avg = mean(motivation))
+K6$week <- as.numeric(K6$week)
+K6$cluster <- as.factor(K6$cluster)
+
+g2<-ggplot(K6, aes(week, avg, colour = cluster)) + geom_line() + xlab("Week") + ylab("Average Motivation")
+
+K7 <- dplyr::count(K4, cluster)
+
+plot(g2)
+```
+
+```{r}
+fit <- kmeans(K3, centers=3) 
+
+fit$cluster
+
+K4 <- data.frame(K3, fit$cluster)
+
+names(K4) <- c("1", "2", "3", "4", "5", "cluster") 
+
+K5 <- tidyr::gather(K4, "week", "motivation", 1:5)
+
+K6 <- K5 %>% group_by(week, cluster)
+K6 <- summarise(K6, avg = mean(motivation))
+K6$week <- as.numeric(K6$week)
+K6$cluster <- as.factor(K6$cluster)
+
+g3<-ggplot(K6, aes(week, avg, colour = cluster)) + geom_line() + xlab("Week") + ylab("Average Motivation")
+
+K7 <- dplyr::count(K4, cluster)
+
+plot(g3)
+```
+
+
+## Including Plots
+
+You can also embed plots, for example:
+
+```{r pressure, echo=FALSE}
+plot(pressure)
+```
+
+Note that the `echo = FALSE` parameter was added to the code chunk to prevent printing of the R code that generated the plot.
